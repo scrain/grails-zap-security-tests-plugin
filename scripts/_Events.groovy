@@ -29,43 +29,51 @@ def originalFunctionalTestPhaseCleanUp
 
 eventTestPhaseStart = { phaseName ->
     if ((phaseName == 'functional') && argsMap['zap']) {
-	event('StatusFinal', ['Running Security Tests using OWASP ZAP Proxy...'])
-	runningSecurityTests = true
-	customFunctionalTestPhaseCleanUp()
-	setZapProxyProperties()
-	argsMap.daemon ? startZapDaemon() : startZapUI()
+        event('StatusFinal', ['Running Security Tests using OWASP ZAP Proxy...'])
+        runningSecurityTests = true
+        customFunctionalTestPhaseCleanUp()
+        setZapProxyProperties()
+        argsMap.daemon ? startZapDaemon() : startZapUI()
     }
 }
 
 eventTestPhaseEnd = { phaseName ->
     if ((phaseName == 'functional') && runningSecurityTests) {
-	def baseUrl = System.getProperty(grailsSettings.FUNCTIONAL_BASE_URL_PROPERTY)
-	spiderUrl(baseUrl)
-	activeScanUrl(baseUrl)
-	storeSession()
+        def baseUrl = baseUrl()
+        spiderUrl(baseUrl)
+        activeScanUrl(baseUrl)
+        storeSession()
 
-	try {
-	    checkAlerts()
-	} catch (e) {
-	    securityTestsFailed = true
-	    throw e
-	} finally {
-	    zapTestPhaseCleanUp()
+        try {
+            checkAlerts()
+        } catch (e) {
+            securityTestsFailed = true
+            throw e
+        } finally {
+            zapTestPhaseCleanUp()
 
-	    String label = securityTestsFailed ? "Security Tests FAILED" : "Security Tests PASSED"
-	    String msg = ""
-	    if (createTestReports) {
-		event("TestProduceReports", [])
-		msg += " - ZAP session stored"
-	    }
-	    if (securityTestsFailed) {
-		grailsConsole.error(label, msg)
-	    }
-	    else {
-		grailsConsole.addStatus("$label$msg")
-	    }
-	}
+            String label = securityTestsFailed ? "Security Tests FAILED" : "Security Tests PASSED"
+            String msg = ""
+            if (createTestReports) {
+                event("TestProduceReports", [])
+                msg += " - ZAP session stored"
+            }
+            if (securityTestsFailed) {
+                grailsConsole.error(label, msg)
+            }
+            else {
+                grailsConsole.addStatus("$label$msg")
+            }
+        }
     }
+}
+
+baseUrl = {
+    def url = System.getProperty(grailsSettings.FUNCTIONAL_BASE_URL_PROPERTY)
+    if ( ! url ) {
+        url = System.getProperty('geb.build.baseUrl')
+    }
+    url
 }
 
 zapTestPhaseCleanUp = {
