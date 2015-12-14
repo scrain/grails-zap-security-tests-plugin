@@ -26,7 +26,7 @@ import org.zaproxy.clientapi.core.ClientApi
 includeTargets << grailsScript("_GrailsEvents")
 
 def zapConfig
-def zapClient
+ClientApi zapClient
 boolean zapTimeoutExceeded 
 
 target('startZapUI': "Start the OWASP ZAP Proxy in UI mode") {
@@ -43,15 +43,15 @@ target('startZapDaemon': "Start the OWASP ZAP Proxy in daemon mode") {
 
 target('zapConfiguration': 'Parse ZAP configuration') {
     if (!zapConfig) {
-	event('StatusFinal', ['Configuring ZAP Security Tests plugin...'])
-	def configPath = "${grailsSettings.baseDir}/grails-app/conf/ZapSecurityTestsConfig.groovy"
-	zapConfig = new ConfigSlurper().parse(new URL("file://${configPath}"))
+        event('StatusFinal', ['Configuring ZAP Security Tests plugin...'])
+        def configPath = "${grailsSettings.baseDir}/grails-app/conf/ZapSecurityTestsConfig.groovy"
+        zapConfig = new ConfigSlurper().parse(new URL("file://${configPath}"))
     }
 }
 
 initClient = {
     if (!zapClient) {
-	zapClient = new ClientApi(zapConfig.zap.proxyHost, zapConfig.zap.proxyPort, zapConfig.zap.debug)
+        zapClient = new ClientApi(zapConfig.zap.proxyHost, zapConfig.zap.proxyPort, zapConfig.zap.debug)
     }
 }
 
@@ -65,50 +65,50 @@ startZapProcess = { daemonMode ->
             classname: 'org.zaproxy.zap.ZAP', 
             classpathRef: 'zapClasspath', 
             fork: true, spawn: true, dir: zapInstallDir) {
-	if (daemonMode) {
-	    arg(value: '-daemon')
-	}
+        if (daemonMode) {
+            arg(value: '-daemon')
+        }
     }
     event('StatusFinal', ['Waiting ZAP Proxy to start...'])
     ant.waitfor(maxwait: zapTimeout, maxwaitunit: 'millisecond', timeoutproperty: 'zapTimeoutExceeded') {
-	socket(server: zapAddress, port: zapPort)
+        socket(server: zapAddress, port: zapPort)
     }
     if (zapTimeoutExceeded) {
-	def msg = "ZAP proxy dit not start in ${zapTimeout}ms or it is not listening at the proxy port $zapPort"
-	event('StatusError', [msg])
-	exit 1
+        def msg = "ZAP proxy did not start in ${zapTimeout}ms or it is not listening at the proxy port $zapPort"
+        event('StatusError', [msg])
+        exit 1
     } else {
-	event('StatusUpdate', ["ZAP proxy started and listening at proxy port $zapPort"])
+        event('StatusUpdate', ["ZAP proxy started and listening at proxy port $zapPort"])
     }
 }
 
 stopZapProcess = {
     event('StatusFinal', ["Stopping OWASP ZAP Proxy..."])
     try {
-	initClient()
-	zapClient.stopZap()
+        initClient()
+        zapClient.core.shutdown()
     } catch (Exception e) {
-	throw new BuildException(e)
+        throw new BuildException(e)
     }
 }
 
 spiderUrl = { url ->
     event('StatusFinal', ["Spidering [$url]..."])
     try {
-	initClient()
-	zapClient.spiderUrl(url)
+        initClient()
+        zapClient.spider.scan("", url, "", "", "")
     } catch (Exception e) {
-	throw new BuildException(e)
+        throw new BuildException(e)
     }
 }
 
 activeScanUrl = { url ->
     event('StatusFinal', ["Active scanning [$url]..."])
     try {
-	initClient()
-	zapClient.activeScanUrl(url)
+        initClient()
+        zapClient.ascan.scan("", url, "True", "False", "", "", "")
     } catch (Exception e) {
-	throw new BuildException(e)
+        throw new BuildException(e)
     }
 }
 
